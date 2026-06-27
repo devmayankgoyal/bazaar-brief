@@ -13,10 +13,18 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60; // seconds — generous enough for ~8 sequential Claude calls
 
 export async function GET(request) {
-  const authHeader = request.headers.get("authorization");
-  const expected = `Bearer ${process.env.CRON_SECRET}`;
+  const authHeader = (request.headers.get("authorization") || "").trim();
+  const expectedSecret = (process.env.CRON_SECRET || "").trim();
+  const expected = `Bearer ${expectedSecret}`;
 
-  if (!process.env.CRON_SECRET || authHeader !== expected) {
+  if (!expectedSecret || authHeader !== expected) {
+    console.error("[api/cron] Unauthorized request.", {
+      hasEnvSecret: Boolean(expectedSecret),
+      envSecretLength: expectedSecret.length,
+      receivedHeaderLength: authHeader.length,
+      receivedHeaderPreview: authHeader.slice(0, 12) + "...",
+      expectedPreview: expected.slice(0, 12) + "...",
+    });
     return new Response("Unauthorized", { status: 401 });
   }
 
